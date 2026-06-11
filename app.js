@@ -204,6 +204,7 @@ async function doLogin() {
     await api('/auth/login', { method: 'POST', body: { password: pwd } });
     closeModal();
     await refreshAuth();
+    await renderTabs(); // revela a aba Configurações
     toast('Sessão admin iniciada (15 min) ✓', 'success');
     navTo(S.currentModule, true);
   } catch (e) { toast(e.message, 'error'); }
@@ -211,6 +212,7 @@ async function doLogin() {
 async function doLogout() {
   await api('/auth/logout', { method: 'POST' });
   await refreshAuth();
+  await renderTabs(); // oculta a aba Configurações
   toast('Sessão encerrada', 'info');
   navTo(S.currentModule, true);
 }
@@ -254,12 +256,14 @@ const RENDERERS = {};
 
 async function renderTabs() {
   S.cfg = await get('/config', true);
-  const tabs = S.cfg.modules.filter(m => m.enabled).map(m =>
+  // Configurações só fica visível para o Admin logado
+  const tabs = S.cfg.modules.filter(m => m.enabled && (m.id !== 'settings' || S.isAdmin)).map(m =>
     `<div class="tab ${m.id === S.currentModule ? 'active' : ''}" data-mod="${m.id}" onclick="navTo('${m.id}')">${m.icon} ${esc(m.label)}</div>`).join('');
   document.getElementById('tabs').innerHTML = tabs;
 }
 
 async function navTo(id, fresh = false) {
+  if (id === 'settings' && !S.isAdmin) id = 'overview'; // Configurações é exclusivo do Admin
   S.currentModule = id;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.mod === id));
   destroyCharts(); stopSlaTick();
@@ -316,7 +320,7 @@ RENDERERS.overview = async () => {
   ]);
   const okrAvg = okrs.length ? Math.round(okrs.reduce((a, o) => a + o.current_pct, 0) / okrs.length) : 0;
 
-  const moduleGrid = S.cfg.modules.map(m =>
+  const moduleGrid = S.cfg.modules.filter(m => m.id !== 'settings' || S.isAdmin).map(m =>
     `<div class="module-card ${m.enabled ? '' : 'disabled'}" ${m.enabled ? `onclick="navToModule('${m.id}')"` : ''}>
       <div class="mc-icon">${m.icon}</div><div class="mc-label">${esc(m.label)}</div></div>`).join('');
 
