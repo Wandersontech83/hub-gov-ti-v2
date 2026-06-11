@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HUB GOV TI v2 — Portal Enterprise de Governança de TI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+<!-- ===== TICKER ===== -->
+<div class="ticker-wrap">
+  <div class="ticker" id="ticker"><span>Carregando dados em tempo real…</span></div>
+</div>
+
+<!-- ===== HEADER ===== -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo">🏛️</div>
+    <div class="logo-text">
+      <h1>HUB GOV TI <span class="v2">v2</span></h1>
+      <p>Portal Enterprise de Governança de TI</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="live-badge" title="Dados servidos pela API em tempo real"><span class="live-dot"></span>Live</span>
+    <span class="clock mono" id="clock">--:--:--</span>
+    <button class="btn btn-secondary" id="btnSync" onclick="syncAll()">🔄 Sync All</button>
+    <button class="btn btn-primary" id="btnAdmin" onclick="adminButton()">🔐 Admin</button>
+  </div>
+</header>
+
+<!-- ===== TABS ===== -->
+<nav class="tabs-bar"><div class="tabs" id="tabs"></div></nav>
+
+<!-- ===== CONTEÚDO ===== -->
+<main class="main" id="main">
+  <div class="loading-panel">Carregando portal…</div>
+</main>
+
+<footer class="footer">
+  HUB GOV TI v2 Cloud · Supabase (PostgreSQL free tier) + GitHub Pages · 100% gratuito
+  · <span id="footerRole">Modo Visualizador</span>
+</footer>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal" id="modalBox">
+    <div class="modal-header">
+      <h3 id="modalTitle">Detalhe</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- ===== TOASTS ===== -->
+<div class="toast-area" id="toastArea"></div>
+
+<script src="supabase-config.js"></script>
+<script src="supabase-api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
