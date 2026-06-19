@@ -211,6 +211,25 @@ ${pam.slice(0,3).map(a => `  [PAM] ${a.account}: ${a.rotation_days} dias sem rot
       .replace(/\n/g, '<br>');
   }
 
+  // ── Timer de inatividade (5 min → limpa tudo) ────────────────────────────
+  const INACTIVITY_MS = 5 * 60 * 1000;
+  let inactivityTimer = null;
+
+  function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+      const box = document.getElementById('copilotAnswers');
+      if (box && box.innerHTML.trim()) {
+        box.innerHTML = `
+          <div style="text-align:center;padding:18px 0;color:var(--text-2);font-size:.8rem">
+            💤 Sessão limpa por inatividade — faça uma nova pergunta
+          </div>`;
+        // Remove a mensagem após 4s
+        setTimeout(() => { if (box) box.innerHTML = ''; }, 4000);
+      }
+    }, INACTIVITY_MS);
+  }
+
   // ── Override principal: askCopilot ────────────────────────────────────────
   window.askCopilot = async function (q) {
     if (!q || !q.trim()) return;
@@ -225,9 +244,9 @@ ${pam.slice(0,3).map(a => `  [PAM] ${a.account}: ${a.rotation_days} dias sem rot
     const box = document.getElementById('copilotAnswers');
     if (!box) return;
 
-    // Placeholder "pensando"
+    // ── Limpa resposta anterior e mostra "pensando" ──
     const uid = 'cp_' + Date.now();
-    box.insertAdjacentHTML('afterbegin', `
+    box.innerHTML = `
       <div id="${uid}" class="copilot-answer" style="min-height:60px">
         <div style="display:flex;align-items:center;gap:10px;color:var(--text-2);font-size:.85rem">
           <div class="groq-spin"></div>
@@ -236,7 +255,7 @@ ${pam.slice(0,3).map(a => `  [PAM] ${a.account}: ${a.rotation_days} dias sem rot
         <div style="font-size:.78rem;color:var(--text-3,#8b949e);margin-top:4px">
           "${q.replace(/&/g,'&amp;').replace(/</g,'&lt;')}"
         </div>
-      </div>`);
+      </div>`;
 
     const inp = document.getElementById('copilotInput');
     if (inp) inp.value = '';
@@ -245,34 +264,42 @@ ${pam.slice(0,3).map(a => `  [PAM] ${a.account}: ${a.rotation_days} dias sem rot
       const data   = await collectData(q);
       const answer = await callGroq(q, data);
 
-      document.getElementById(uid).innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <span>🤖 <strong>Copilot IA</strong></span>
-          <span style="font-size:.7rem;background:var(--surface-2,#21262d);color:var(--text-2);
-                       padding:2px 8px;border-radius:20px;font-family:monospace">
-            Groq · ${GROQ_MODEL}
-          </span>
-        </div>
-        <div style="line-height:1.65">${md2html(answer)}</div>
-        <div style="margin-top:10px;font-size:.73rem;color:var(--text-2)">
-          Gerado em ${new Date().toLocaleTimeString('pt-BR')} com dados em tempo real
-          &nbsp;·&nbsp;
-          <a href="#" onclick="localStorage.removeItem('${LS_KEY}');
-                               alert('Chave Groq removida. Próxima pergunta vai pedir uma nova.');
-                               return false;"
-             style="color:var(--text-2)">🔑 trocar chave</a>
+      box.innerHTML = `
+        <div class="copilot-answer">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span>🤖 <strong>Copilot IA</strong></span>
+            <span style="font-size:.7rem;background:var(--surface-2,#21262d);color:var(--text-2);
+                         padding:2px 8px;border-radius:20px;font-family:monospace">
+              Groq · ${GROQ_MODEL}
+            </span>
+          </div>
+          <div style="line-height:1.65">${md2html(answer)}</div>
+          <div style="margin-top:10px;font-size:.73rem;color:var(--text-2)">
+            Gerado em ${new Date().toLocaleTimeString('pt-BR')} com dados em tempo real
+            &nbsp;·&nbsp;
+            <a href="#" onclick="localStorage.removeItem('${LS_KEY}');
+                                 alert('Chave Groq removida. Próxima pergunta vai pedir uma nova.');
+                                 return false;"
+               style="color:var(--text-2)">🔑 trocar chave</a>
+          </div>
         </div>`;
+
+      // Reinicia o timer de inatividade após cada resposta
+      resetInactivityTimer();
+
     } catch (err) {
       const isKey = /401|inválida|invalid|api key/i.test(err.message);
-      document.getElementById(uid).innerHTML = `
-        <div style="color:var(--red,#f85149)">
-          ⚠️ <strong>Erro no Copilot:</strong> ${err.message}
-        </div>
-        ${isKey ? `<p style="margin-top:6px"><a href="#"
-          onclick="localStorage.removeItem('${LS_KEY}');
-                   askCopilot(${JSON.stringify(q)});
-                   return false;"
-          style="color:var(--blue,#58a6ff)">🔑 Reconfigurar chave Groq e tentar novamente</a></p>` : ''}`;
+      box.innerHTML = `
+        <div class="copilot-answer">
+          <div style="color:var(--red,#f85149)">
+            ⚠️ <strong>Erro no Copilot:</strong> ${err.message}
+          </div>
+          ${isKey ? `<p style="margin-top:6px"><a href="#"
+            onclick="localStorage.removeItem('${LS_KEY}');
+                     askCopilot(${JSON.stringify(q)});
+                     return false;"
+            style="color:var(--blue,#58a6ff)">🔑 Reconfigurar chave Groq e tentar novamente</a></p>` : ''}
+        </div>`;
     }
   };
 
